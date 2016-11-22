@@ -11,7 +11,7 @@
 @interface LocalAudioPlay ()<AVAudioPlayerDelegate>
 
 @property (nonatomic, strong) AVAudioPlayer *audioPlayer;
-@property (strong ,nonatomic) NSTimer *timer;//进度更新定时器
+@property (nonatomic, strong) NSTimer *timer;//进度更新定时器
 
 @end
 
@@ -24,15 +24,14 @@
  *
  *  @return 实例
  */
-- (void)audioPlayerWithFileName:(NSString *)fileName
+- (void)audioPlayerWithFileUrl:(NSString *)pathUrl
 {
     if (nil == _audioPlayer) {
-        NSString *filePath = [[NSBundle mainBundle] pathForResource:fileName ofType:nil];
-        NSURL *pathUrl = [NSURL fileURLWithPath:filePath];
         
         NSError *error = nil;
         //初始化播放器，注意这里的Url参数只能时文件路径，不支持HTTP Url
-        _audioPlayer = [[AVAudioPlayer alloc]initWithContentsOfURL:pathUrl error:&error];
+        _audioPlayer = [[AVAudioPlayer alloc]initWithContentsOfURL:[NSURL fileURLWithPath:pathUrl]
+                                                             error:&error];
         //循环次数
         _audioPlayer.numberOfLoops = 0;
         _audioPlayer.delegate = self;
@@ -40,6 +39,16 @@
         if(error){
             NSLog(@"初始化播放器过程发生错误,错误信息:%@",error.localizedDescription);
         }
+        
+        AVAudioSession *session = [AVAudioSession sharedInstance];
+        [session setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
+        [session setActive:YES error:nil];
+        
+        //添加通知，拔出耳机后暂停播放
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(routeChange:)
+                                                     name:AVAudioSessionRouteChangeNotification
+                                                   object:nil];
     }
 }
 
@@ -58,6 +67,8 @@
     }
     return _timer;
 }
+
+#pragma mark - avdioPlayer method
 
 /**
  *  播放
@@ -83,19 +94,11 @@
     }
 }
 
-- (void)updateProgress
-{
-    float progress= self.audioPlayer.currentTime /self.audioPlayer.duration;
-    
-    if (self.delegate && [self.delegate respondsToSelector:@selector(updateProgressWith:)]) {
-        [self.delegate updateProgressWith:progress];
-    }
-}
-
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
 {
     if (flag) {
         NSLog(@"播放完毕");
+        [[AVAudioSession sharedInstance] setActive:NO error:nil];
         [self.timer invalidate];
     }
 }
@@ -106,6 +109,38 @@
     if(error){
         NSLog(@"初始化播放器过程发生错误,错误信息:%@",error.localizedDescription);
     }
+}
+
+#pragma mark - delegate
+
+- (void)updateProgress
+{
+    float progress= self.audioPlayer.currentTime /self.audioPlayer.duration;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(updateAudioPlayWithProgress:AndCurrentTime:)]) {
+        [self.delegate updateAudioPlayWithProgress:progress AndCurrentTime:self.audioPlayer.currentTime];
+    }
+}
+
+#pragma mark - notifition
+
+- (void)routeChange:(NSNotification *)noti
+{
+    NSDictionary *dic = noti.userInfo;
+    int changeReason = [dic[AVAudioSessionRouteChangeReasonKey] intValue];
+    //等于AVAudioSessionRouteChangeReasonOldDeviceUnavailable表示旧输出不可用
+    if (changeReason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) {
+        AVAudioSessionRouteDescription *routeDescription = dic[AVAudioSessionRouteChangePreviousRouteKey];
+        AVAudioSessionPortDescription *portDescription = [routeDescription.outputs firstObject];
+        //原设备为耳机则暂停
+        if ([portDescription.portType isEqualToString:@"Headphones"]) {
+            [self pause];
+        }
+    }
+}
+
+-(void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionRouteChangeNotification object:nil];
 }
 
 

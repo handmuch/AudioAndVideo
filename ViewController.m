@@ -10,9 +10,14 @@
 
 //controller
 #import "AudioPlayViewController.h"
+#import "MPMediaPlayViewController.h"
+#import "AudioRecorderViewController.h"
 
 //common
 #import "soundEffectPlay.h"
+#import "AudioStreamer.h"
+
+#define Music_Name @"Say You Love Me.mp3"
 
 @interface ViewController ()
 
@@ -32,7 +37,7 @@
 
 - (void)initView
 {
-    _titleArray = @[@"AudioToolbox", @"AudioPlayer"];
+    _titleArray = @[@"AudioToolbox", @"AudioPlayer",@"MPMediaPlayer(disable)", @"AudioRecorder",@"AudioStreamer"];
     
     self.tableView = [[UITableView alloc]initWithFrame:self.view.bounds style:UITableViewStylePlain];
     self.tableView.backgroundColor = [UIColor clearColor];
@@ -40,6 +45,7 @@
     self.tableView.dataSource = self;
     
     [self.view addSubview:self.tableView];
+    
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -85,14 +91,48 @@
         AudioPlayViewController *audioPlayCtr = [[AudioPlayViewController alloc]init];
         [self.navigationController pushViewController:audioPlayCtr animated:YES];
     }
-    
-    //
-    
+    else if (indexPath.row == 2)
+    {
+        MPMediaPlayViewController *mpMediaPlay = [[MPMediaPlayViewController alloc]init];
+        [self.navigationController pushViewController:mpMediaPlay animated:YES];
+    }
+    else if (indexPath.row == 3)
+    {
+        AudioRecorderViewController *recorderCtr = [[AudioRecorderViewController alloc]init];
+        [self.navigationController pushViewController:recorderCtr animated:YES];
+    }
+    else if (indexPath.row == 4)
+    {
+        //本地音乐
+//        NSString *filePath = [[NSBundle mainBundle] pathForResource:Music_Name ofType:nil];
+//        [[AudioStreamer shareInstance]streamerPlayWithUrl:[NSURL fileURLWithPath:filePath]];
+        
+        //网络音乐
+        [[AudioStreamer shareInstance]streamerPlayWithUrl:[NSURL URLWithString:@"http://wailian.ik6.com/up/20150413/18/20150413184553_27366.mp3"]];
+    }
+
 }
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+
+- (int)convertToInt:(NSString*)strtemp
+{
+    int strlength = 0;
+    char* p = (char*)[strtemp cStringUsingEncoding:NSUnicodeStringEncoding];
+    for (int i=0 ; i<[strtemp lengthOfBytesUsingEncoding:NSUnicodeStringEncoding] ;i++) {
+        if (*p) {
+            p++;
+            strlength++;
+        }
+        else {
+            p++;
+        }
+        
+    }
+    return strlength;
 }
 
 @end

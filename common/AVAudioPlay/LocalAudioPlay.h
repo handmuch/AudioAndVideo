@@ -7,11 +7,12 @@
 //
 
 #import <Foundation/Foundation.h>
-#import <AVFoundation/AVAudioPlayer.h>
+#import <AVFoundation/AVFoundation.h>
 
 @protocol AudioPlayProgressUpdate <NSObject>
 
-- (void)updateProgressWith:(float)progress;
+@optional
+- (void)updateAudioPlayWithProgress:(float)progress AndCurrentTime:(float)currentTime;
 
 @end
 
@@ -26,7 +27,7 @@
  *
  *  @return 
  */
-- (void)audioPlayerWithFileName:(NSString *)fileName;
+- (void)audioPlayerWithFileUrl:(NSString *)pathUrl;
 
 /**
  *  播放

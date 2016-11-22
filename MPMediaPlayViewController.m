@@ -1,38 +1,35 @@
 //
-//  AudioPlayViewController.m
+//  MPMediaPlayViewController.m
 //  AudioAndvideo_Demo
 //
-//  Created by POWER on 16/11/17.
+//  Created by POWER on 16/11/18.
 //  Copyright © 2016年 Demo. All rights reserved.
 //
 
-#import "AudioPlayViewController.h"
-#import "LocalAudioPlay.h"
+#import "MPMediaPlayViewController.h"
+#import "MPMediaPlay.h"
 
-#define Music_Name @"Say You Love Me.mp3"
-#define Music_Title @"Say You Love Me"
-
-@interface AudioPlayViewController ()<AudioPlayProgressUpdate>
+@interface MPMediaPlayViewController ()
 
 @property (strong, nonatomic) UIView *controlbackground;
 @property (strong, nonatomic) UILabel *controlPanel; //控制面板
 @property (strong, nonatomic) UIProgressView *playProgress;//播放进度
 @property (strong, nonatomic) UILabel *musicSinger; //演唱者
 @property (strong, nonatomic) UIButton *playOrPause; //播放/暂停按钮(如果tag为0认为是暂停状态，1是播放状态)
+@property (strong, nonatomic) UIButton *nextSong;
+@property (strong, nonatomic) UIButton *PreviousSong;
 
-@property (strong, nonatomic) LocalAudioPlay *audioPlayer;
+@property (strong, nonatomic) MPMediaPlay *mpMediaPlayer;
 
 @end
 
-@implementation AudioPlayViewController
+@implementation MPMediaPlayViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    
-    self.title = Music_Title;
-    
+    // Do any additional setup after loading the view.
     [self initView];
-    [self initAudioPlay];
+    [self initMPMediaPlayer];
 }
 
 - (void)initView
@@ -61,73 +58,60 @@
     self.playOrPause = [[UIButton alloc]initWithFrame:CGRectMake(self.controlbackground.bounds.size.width/2 - 32.5, 55, 65, 65)];
     [self.playOrPause setImage:[UIImage imageNamed:@"play.png"]
                       forState:UIControlStateNormal];
-    [self.playOrPause setBackgroundImage:[UIImage imageNamed:@"playbg.png"] forState:UIControlStateNormal];
     self.playOrPause.tag = 0;
     [self.playOrPause addTarget:self action:@selector(playOrPause:) forControlEvents:UIControlEventTouchUpInside];
     [self.controlbackground addSubview:self.playOrPause];
+    
+    self.nextSong = [[UIButton alloc]initWithFrame:CGRectMake(self.controlbackground.bounds.size.width/2 + 30, 65, 45, 45)];
+    [self.nextSong setImage:[UIImage imageNamed:@"next.png"] forState:UIControlStateNormal];
+    [self.nextSong addTarget:self action:@selector(playNext:) forControlEvents:UIControlEventTouchUpInside];
+    [self.controlbackground addSubview:self.nextSong];
+    
+    self.PreviousSong = [[UIButton alloc]initWithFrame:CGRectMake(self.controlbackground.bounds.size.width/2 - 80, 65, 45, 45)];
+    [self.PreviousSong setImage:[UIImage imageNamed:@"pervious.png"] forState:UIControlStateNormal];
+    [self.PreviousSong addTarget:self action:@selector(playPrevious:) forControlEvents:UIControlEventTouchUpInside];
+    [self.controlbackground addSubview:self.PreviousSong];
+    
+    UIBarButtonItem *ipodItem = [[UIBarButtonItem alloc]initWithTitle:@"选择"
+                                                                style:UIBarButtonItemStylePlain
+                                                               target:self
+                                                               action:@selector(itemSelect:)];
+    [self.navigationItem setRightBarButtonItem:ipodItem animated:NO];
 }
 
-- (void)initAudioPlay
+- (void)initMPMediaPlayer
 {
-    if (self.audioPlayer == nil) {
-        self.audioPlayer = [[LocalAudioPlay alloc]init];
-        self.audioPlayer.delegate = self;
-        
-        NSString *filePath = [[NSBundle mainBundle] pathForResource:Music_Name ofType:nil];
-        [self.audioPlayer audioPlayerWithFileUrl:filePath];
-    }
+    self.mpMediaPlayer = [[MPMediaPlay alloc]init];
 }
 
-
-/**
- *  显示当面视图控制器时注册远程事件
- *
- *  @param animated 是否以动画的形式显示
- */
--(void)viewWillAppear:(BOOL)animated{
-    [super viewWillAppear:animated];
-    //开启远程控制
-    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
-    //作为第一响应者
-    //[self becomeFirstResponder];
-}
-/**
- *  当前控制器视图不显示时取消远程控制
- *
- *  @param animated 是否以动画的形式消失
- */
--(void)viewWillDisappear:(BOOL)animated{
-    [super viewWillDisappear:animated];
-    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
-    //[self resignFirstResponder];
-}
-
-
-#pragma mark - button seletor
+#pragma mark - method selector
 
 - (void)playOrPause:(UIButton *)sender
 {
     if(sender.tag){
         sender.tag=0;
         [sender setImage:[UIImage imageNamed:@"play.png"] forState:UIControlStateNormal];
-        [self.audioPlayer pause];
+        [self.mpMediaPlayer.playerControl pause];
     }else{
         sender.tag=1;
         [sender setImage:[UIImage imageNamed:@"pause.png"] forState:UIControlStateNormal];
-        [self.audioPlayer play];
+        [self.mpMediaPlayer.playerControl play];
     }
 }
 
-#pragma mark - localAudioPlayDelegate
-
-- (void)updateAudioPlayWithProgress:(float)progress
-                    AndCurrentTime:(float)currentTime
+- (void)playNext:(UIButton *)sender
 {
-    [self.playProgress setProgress:progress animated:YES];
-    
-    NSInteger minutes = floor(currentTime/60);
-    NSInteger seconds = round(currentTime - minutes * 60);
-    self.controlPanel.text = [NSString stringWithFormat:@"%02ld:%02ld",(long)minutes, (long)seconds];
+    [self.mpMediaPlayer.playerControl skipToNextItem];
+}
+
+- (void)playPrevious:(UIButton *)sender
+{
+    [self.mpMediaPlayer.playerControl skipToPreviousItem];
+}
+
+- (void)itemSelect:(id)sender
+{
+    [self.navigationController presentViewController:self.mpMediaPlayer.pickerControl animated:YES completion:nil];
 }
 
 - (void)didReceiveMemoryWarning {
